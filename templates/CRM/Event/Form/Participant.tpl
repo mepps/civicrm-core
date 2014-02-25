@@ -24,7 +24,7 @@
  +--------------------------------------------------------------------+
 *}
 {* This template is used for adding/editing/deleting offline Event Registrations *}
-{if $showFeeBlock }
+{if $showFeeBlock}
   {if $priceSet}
   <div id='validate_pricefield' class='messages crm-error hiddenElement'></div>
     {literal}
@@ -127,12 +127,45 @@
         }
       }
     }
+
+  // change the status to default 'partially paid' for partial payments
+  var feeAmount;
+  var userModifiedAmount;
+
+  cj('#total_amount')
+   .focus(
+     function() {
+       feeAmount = cj(this).val();
+       feeAmount = parseInt(feeAmount);
+     }
+   )
+   .change(
+    function() {
+      userModifiedAmount = cj(this).val();
+      userModifiedAmount = parseInt(userModifiedAmount);
+      if (userModifiedAmount < feeAmount) {
+        cj('#status_id').val(CRM.partiallyPaidStatusId);
+      }
+    }
+  );
+
+  cj('#Participant').submit(
+    function(e) {
+      var userSubmittedStatus = cj('#status_id').val();
+      var statusLabel = cj('#status_id option:selected').text();
+      if (userModifiedAmount < feeAmount && userSubmittedStatus != CRM.partiallyPaidStatusId) {
+        var result = confirm('Payment amount is less than the amount owed. Expected participant status is \'Partially paid\'. Are you sure you want to set the participant status to ' + statusLabel + '? Click OK to continue, Cancel to change your entries.');
+        if (result == false) {
+          e.preventDefault();
+        }
+      }
+    }
+  );
   </script>
   {/literal}
   {/if}
   {include file="CRM/Event/Form/EventFees.tpl"}
-
-{elseif $cdType }
+{elseif $cdType}
   {include file="CRM/Custom/Form/CustomData.tpl"}
 {else}
   {if $participantMode == 'test' }
@@ -254,7 +287,15 @@
             <span class="description">{ts}Source for this registration (if applicable).{/ts}</span></td>
           </tr>
         </table>
-
+       {if $participantId}
+        <table class='form-layout'>
+          <tr>
+            <td class='label'>{ts}Fees{/ts}</td>
+            {* this is where the payment info is shown using CRM/Contribute/Page/PaymentInfo.tpl tpl*}
+            <td id='payment-info'></td>
+          </tr>
+         </table>
+        {/if}
       {* Fee block (EventFees.tpl) is injected here when an event is selected. *}
         <div id="feeBlock"></div>
         <fieldset>
@@ -281,6 +322,9 @@
     </div>
   </div>
   {if $action eq 1 or $action eq 2}
+    {if $participantId}
+      {include file="CRM/Contribute/Page/PaymentInfo.tpl" show='event-payment'}
+    {/if}
     {literal}
     <script type="text/javascript">
     // event select

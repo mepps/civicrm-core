@@ -649,7 +649,7 @@ LEFT JOIN civicrm_option_value ov ON e.activity_type_id = ov.value AND ov.option
 
       if ($mapping->entity == 'civicrm_participant') {
         $tokenEntity = 'event';
-        $tokenFields = array('event_type', 'title', 'event_id', 'start_date', 'end_date', 'summary', 'description', 'location', 'info_url', 'registration_url', 'fee_amount', 'contact_email', 'contact_phone');
+        $tokenFields = array('event_type', 'title', 'event_id', 'start_date', 'end_date', 'summary', 'description', 'location', 'info_url', 'registration_url', 'fee_amount', 'contact_email', 'contact_phone', 'balance');
         $extraSelect = ', ov.label as event_type, ev.title, ev.id as event_id, ev.start_date, ev.end_date, ev.summary, ev.description, address.street_address, address.city, address.state_province_id, address.postal_code, email.email as contact_email, phone.phone as contact_phone ';
 
         $extraJoin   = "
@@ -728,6 +728,10 @@ WHERE reminder.action_schedule_id = %1 AND reminder.action_date_time IS NULL
           }
           elseif (in_array($field, array('start_date','end_date','join_date','activity_date_time'))) {
             $entityTokenParams["{$tokenEntity}." . $field] = CRM_Utils_Date::customFormat($dao->$field);
+          }
+          elseif ($field == 'balance') {
+            $info = CRM_Contribute_BAO_Contribution::getPaymentInfo($dao->entityID, 'event');
+            $entityTokenParams["{$tokenEntity}." . $field] = CRM_Utils_Array::value('balance', $info);
           }
           else {
             $entityTokenParams["{$tokenEntity}." . $field] = $dao->$field;
@@ -1074,14 +1078,18 @@ LEFT JOIN {$reminderJoinClause}
           reminder.entity_id          = c.id AND
           reminder.entity_table       = 'civicrm_contact' AND
           reminder.action_schedule_id = {$actionSchedule->id}";
-
+        $addWhereClause = '';
+        if ($addWhere) {
+          $addWhereClause = "AND {$addWhere}";
+        }
         $insertAdditionalSql ="
 INSERT INTO civicrm_action_log (contact_id, entity_id, entity_table, action_schedule_id)
 {$addSelect}
 FROM ({$contactTable}, {$table})
 LEFT JOIN {$additionReminderClause}
 {$addGroup}
-{$additionWhere} c.is_deleted = 0 AND c.is_deceased = 0 AND {$addWhere}
+{$additionWhere} c.is_deleted = 0 AND c.is_deceased = 0
+{$addWhereClause}
 AND {$dateClause}
 AND c.id NOT IN (
      SELECT rem.contact_id
@@ -1240,7 +1248,7 @@ WHERE     m.owner_membership_id IS NOT NULL AND
     switch ($mapping['entity']) {
       case 'civicrm_participant':
         $eventContacts = CRM_Core_OptionGroup::values('event_contacts', FALSE, FALSE, FALSE, NULL, 'name');
-        if (!CRM_Utils_Array::value($recipientType, $eventContacts)) {
+        if (empty($eventContacts[$recipientType])) {
           return $options;
         }
         if ($eventContacts[$recipientType] == 'participant_role') {

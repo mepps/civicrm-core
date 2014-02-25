@@ -280,7 +280,7 @@ class CRM_Contribute_Form_ContributionBase extends CRM_Core_Form {
       CRM_Contribute_BAO_ContributionPage::setValues($this->_id, $this->_values);
 
       // check if form is active
-      if (!CRM_Utils_Array::value('is_active', $this->_values)) {
+      if (empty($this->_values['is_active'])) {
         // form is inactive, die a fatal death
         CRM_Core_Error::fatal(ts('The page you requested is currently unavailable.'));
       }
@@ -302,7 +302,7 @@ class CRM_Contribute_Form_ContributionBase extends CRM_Core_Form {
 
       //FIXME: to support multiple payment processors
       if ($isMonetary &&
-        (!$isPayLater || CRM_Utils_Array::value('payment_processor', $this->_values))
+        (!$isPayLater || !empty($this->_values['payment_processor']))
       ) {
         $ppID = CRM_Utils_Array::value('payment_processor', $this->_values);
         if (!$ppID) {
@@ -431,7 +431,7 @@ class CRM_Contribute_Form_ContributionBase extends CRM_Core_Form {
     }
 
     //set pledge block if block id is set
-    if (CRM_Utils_Array::value('pledge_block_id', $this->_values)) {
+    if (!empty($this->_values['pledge_block_id'])) {
       $this->assign('pledgeBlock', TRUE);
     }
 
@@ -512,7 +512,7 @@ class CRM_Contribute_Form_ContributionBase extends CRM_Core_Form {
    */
   function assignToTemplate() {
     $name = CRM_Utils_Array::value('billing_first_name', $this->_params);
-    if (CRM_Utils_Array::value('billing_middle_name', $this->_params)) {
+    if (!empty($this->_params['billing_middle_name'])) {
       $name .= " {$this->_params['billing_middle_name']}";
     }
     $name .= ' ' . CRM_Utils_Array::value('billing_last_name', $this->_params);
@@ -527,9 +527,7 @@ class CRM_Contribute_Form_ContributionBase extends CRM_Core_Form {
     );
 
     $config = CRM_Core_Config::singleton();
-    if (isset($this->_values['is_recur']) &&
-      CRM_Utils_Array::value('is_recur', $this->_paymentProcessor)
-    ) {
+    if (isset($this->_values['is_recur']) && !empty($this->_paymentProcessor['is_recur'])) {
       $this->assign('is_recur_enabled', 1);
       $vars = array_merge($vars, array(
         'is_recur', 'frequency_interval', 'frequency_unit',
@@ -586,7 +584,7 @@ class CRM_Contribute_Form_ContributionBase extends CRM_Core_Form {
 
     $this->assign('address', CRM_Utils_Address::format($addressFields));
 
-    if (CRM_Utils_Array::value('hidden_onbehalf_profile', $this->_params)) {
+    if (!empty($this->_params['hidden_onbehalf_profile'])) {
       $this->assign('onBehalfName', $this->_params['organization_name']);
       $locTypeId = array_keys($this->_params['onbehalf_location']['email']);
       $this->assign('onBehalfEmail', $this->_params['onbehalf_location']['email'][$locTypeId[0]]['email']);
@@ -597,7 +595,7 @@ class CRM_Contribute_Form_ContributionBase extends CRM_Core_Form {
     if ($this->_amount > 0.0) {
       $assignCCInfo = TRUE;
     }
-    elseif (CRM_Utils_array::value('selectMembership', $this->_params)) {
+    elseif (!empty($this->_params['selectMembership'])) {
       $memFee = CRM_Core_DAO::getFieldValue('CRM_Member_DAO_MembershipType', $this->_params['selectMembership'], 'minimum_fee');
       if ($memFee > 0.0) {
         $assignCCInfo = TRUE;
@@ -640,7 +638,7 @@ class CRM_Contribute_Form_ContributionBase extends CRM_Core_Form {
    * @return void
    * @access public
    */
-  function buildCustom($id, $name, $viewOnly = FALSE, $onBehalf = FALSE, $fieldTypes = NULL) {
+  function buildCustom($id, $name, $viewOnly = FALSE, $profileContactType = NULL, $fieldTypes = NULL) {
     $stateCountryMap = array();
 
     if ($id) {
@@ -709,7 +707,7 @@ class CRM_Contribute_Form_ContributionBase extends CRM_Core_Form {
             $stateCountryMap[$index][$prefixName] = $key;
 
             if ($prefixName == "state_province") {
-              if ($onBehalf) {
+              if ($profileContactType == 'onbehalf') {
                 //CRM-11881: Bypass required-ness check for state/province on Contribution Confirm page
                 //as already done during Contribution registration via onBehalf's quickForm
                 $field['is_required'] = FALSE;
@@ -728,16 +726,23 @@ class CRM_Contribute_Form_ContributionBase extends CRM_Core_Form {
             }
           }
 
-          if ($onBehalf) {
+          if ($profileContactType) {
+            //Since we are showing honoree name separately so we are removing it from honoree profile just for display
+            $honoreeNamefields = array('prefix_id', 'first_name', 'last_name', 'suffix_id', 'organization_name', 'household_name');
+            if ($profileContactType == 'honor' && in_array($field['name'], $honoreeNamefields)) {
+              unset($fields[$field['name']]);
+              continue;
+            }
             if (!empty($fieldTypes) && in_array($field['field_type'], $fieldTypes)) {
               CRM_Core_BAO_UFGroup::buildProfile(
                 $this,
                 $field,
                 CRM_Profile_Form::MODE_CREATE,
                 $contactID,
-                TRUE
+                TRUE,
+                $profileContactType
               );
-              $this->_fields['onbehalf'][$key] = $field;
+              $this->_fields[$profileContactType][$key] = $field;
             }
             else {
               unset($fields[$key]);

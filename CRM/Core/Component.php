@@ -134,10 +134,10 @@ class CRM_Core_Component {
           // also set the smarty variables to the current component
           $template = CRM_Core_Smarty::singleton();
           $template->assign('activeComponent', $name);
-          if (CRM_Utils_Array::value('formTpl', $comp->info[$name])) {
+          if (!empty($comp->info[$name]['formTpl'])) {
             $template->assign('formTpl', $comp->info[$name]['formTpl']);
           }
-          if (CRM_Utils_Array::value('css', $comp->info[$name])) {
+          if (!empty($comp->info[$name]['css'])) {
             $styleSheets = '<style type="text/css">@import url(' . "{$config->resourceBase}css/{$comp->info[$name]['css']});</style>";
             CRM_Utils_System::addHTMLHead($styleSheet);
           }
@@ -308,12 +308,15 @@ class CRM_Core_Component {
     return CRM_Core_DAO::$_nullObject;
   }
 
+  /**
+   * FIXME: This function does not appear to do anything. The is_array() check runs on a bunch of objects and (always?) returns false
+   */
   static function &taskList() {
     $info = self::_info();
 
     $tasks = array();
     foreach ($info as $name => $value) {
-      if (CRM_Utils_Array::value('task', $info[$name])) {
+      if (is_array($info[$name]) && isset($info[$name]['task'])) {
         $tasks += $info[$name]['task'];
       }
     }

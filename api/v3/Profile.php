@@ -271,7 +271,7 @@ function civicrm_api3_profile_submit($params) {
     );
   }
 
-  if (CRM_Utils_Array::value('add_to_group_id', $ufGroupDetails)) {
+  if (!empty($ufGroupDetails['add_to_group_id'])) {
     $contactIds = array($params['contact_id']);
     CRM_Contact_BAO_GroupContact::addContactsToGroup($contactIds,
       $ufGroupDetails['add_to_group_id']
@@ -581,8 +581,10 @@ function _civicrm_api3_buildprofile_submitfields($profileID, $optionsBehaviour =
         if(isset($profileFields[$profileID][$entityfield])) {
           unset($profileFields[$profileID][$entityfield]);
         }
-        // we will make the mixed case version (e.g. of 'Primary') an alias
-        $profileFields[$profileID][$fieldName]['api.aliases'][] = $entityfield;
+        if(!in_array($entityfield, $profileFields[$profileID][$fieldName]['api.aliases'])) {
+          // we will make the mixed case version (e.g. of 'Primary') an alias
+          $profileFields[$profileID][$fieldName]['api.aliases'][] = $entityfield;
+        }
       }
       /**
        * putting this on hold -this would cause the api to set the default - but could have unexpected behaviour

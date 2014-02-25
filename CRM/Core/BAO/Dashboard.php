@@ -123,7 +123,7 @@ class CRM_Core_BAO_Dashboard extends CRM_Core_DAO_Dashboard {
 
     $allDashlets = CRM_Utils_Array::index(array('name'), $getDashlets['values']);
     $defaultDashlets = array();
-    if (!$hasDashlets && CRM_Utils_Array::value('blog', $allDashlets)) {
+    if (!$hasDashlets && !empty($allDashlets['blog'])) {
       $defaultDashlets['blog'] = array(
         'dashboard_id' => $allDashlets['blog']['id'],
         'is_active' => 1,
@@ -308,10 +308,11 @@ class CRM_Core_BAO_Dashboard extends CRM_Core_DAO_Dashboard {
       $contactID = $session->get('userID');
     }
 
-    $session = CRM_Core_Session::singleton();
-    $contactID = $session->get('userID');
+    if (empty($contactID)) {
+      throw new RuntimeException("Failed to determine contact ID");
+    }
 
-    //we need to get existing dashletes, so we know when to update or insert
+    //we need to get existing dashlets, so we know when to update or insert
     $contactDashlets = self::getContactDashlets(TRUE, $contactID);
 
     $dashletIDs = array();
@@ -372,7 +373,7 @@ class CRM_Core_BAO_Dashboard extends CRM_Core_DAO_Dashboard {
     // special case to handle duplicate entires for report instances
     $dashboardID = CRM_Utils_Array::value('id', $params);
 
-    if (CRM_Utils_Array::value('instanceURL', $params)) {
+    if (!empty($params['instanceURL'])) {
       $query = "SELECT id
                         FROM `civicrm_dashboard`
                         WHERE url LIKE '" . CRM_Utils_Array::value('instanceURL', $params) . "&%'";
@@ -383,7 +384,7 @@ class CRM_Core_BAO_Dashboard extends CRM_Core_DAO_Dashboard {
 
     if (!$dashboardID) {
       // check url is same as exiting entries, if yes just update existing
-      if (CRM_Utils_Array::value('name', $params)) {
+      if (!empty($params['name'])) {
         $dashlet->name = CRM_Utils_Array::value('name', $params);
         $dashlet->find(TRUE);
       }
@@ -468,6 +469,10 @@ class CRM_Core_BAO_Dashboard extends CRM_Core_DAO_Dashboard {
     }
   }
 
+  /**
+   * @param array $params each item is a spec for a dashlet on the contact's dashboard
+   * @return bool
+   */
   static function addContactDashletToDashboard(&$params) {
     $valuesString = NULL;
     $columns = array();

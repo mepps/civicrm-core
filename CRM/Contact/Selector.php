@@ -328,6 +328,19 @@ class CRM_Contact_Selector extends CRM_Core_Selector_Base implements CRM_Core_Se
    */
   function &getColumnHeaders($action = NULL, $output = NULL) {
     $headers = NULL;
+
+    // unset return property elements that we don't care
+    if (!empty($this->_returnProperties)) {
+      $doNotCareElements = array(
+        'contact_type',
+        'contact_sub_type',
+        'sort_name',
+      );
+      foreach ( $doNotCareElements as $value) {
+        unset($this->_returnProperties[$value]);
+      }
+    }
+
     if ($output == CRM_Core_Selector_Controller::EXPORT) {
       $csvHeaders = array(ts('Contact Id'), ts('Contact Type'));
       foreach ($this->getColHeads($action, $output) as $column) {
@@ -367,7 +380,7 @@ class CRM_Contact_Selector extends CRM_Core_Selector_Base implements CRM_Core_Se
         $locationTypes = CRM_Core_PseudoConstant::get('CRM_Core_DAO_Address', 'location_type_id');
 
         foreach ($this->_fields as $name => $field) {
-          if (CRM_Utils_Array::value('in_selector', $field) &&
+          if (!empty($field['in_selector']) &&
             !in_array($name, $skipFields)
           ) {
             if (strpos($name, '-') !== FALSE) {
@@ -430,10 +443,6 @@ class CRM_Contact_Selector extends CRM_Core_Selector_Base implements CRM_Core_Se
       $properties = self::makeProperties($this->_returnProperties);
 
       foreach ($properties as $prop) {
-        if ($prop == 'contact_type' || $prop == 'contact_sub_type' || $prop == 'sort_name') {
-          continue;
-        }
-
         if (strpos($prop, '-')) {
           list($loc, $fld, $phoneType) = CRM_Utils_System::explode('-', $prop, 3);
           $title = $this->_query->_fields[$fld]['title'];
@@ -444,7 +453,8 @@ class CRM_Contact_Selector extends CRM_Core_Selector_Base implements CRM_Core_Se
         }
         elseif (isset($this->_query->_fields[$prop]) && isset($this->_query->_fields[$prop]['title'])) {
           $title = $this->_query->_fields[$prop]['title'];
-        } else {
+        }
+        else {
           $title = '';
         }
 
@@ -511,6 +521,11 @@ class CRM_Contact_Selector extends CRM_Core_Selector_Base implements CRM_Core_Se
     if ($rowCount) {
       $cacheKey = $this->buildPrevNextCache($sort);
       $result = $this->_query->getCachedContacts($cacheKey, $offset, $rowCount, $includeContactIds);
+
+      // CRM-13996: result is empty when selector columns are sorted. hence we need to run the query again
+      if ( $result->N == 0) {
+        $result = $this->_query->searchQuery($offset, $rowCount, $sort, FALSE, $includeContactIds);
+      }
     }
     else {
       $result = $this->_query->searchQuery($offset, $rowCount, $sort, FALSE, $includeContactIds);
@@ -537,8 +552,7 @@ class CRM_Contact_Selector extends CRM_Core_Selector_Base implements CRM_Core_Se
       $names = array();
       static $skipFields = array('group', 'tag');
       foreach ($this->_fields as $key => $field) {
-        if (
-          CRM_Utils_Array::value('in_selector', $field) &&
+        if (!empty($field['in_selector']) &&
           !in_array($key, $skipFields)
         ) {
           if (strpos($key, '-') !== FALSE) {
@@ -708,8 +722,7 @@ class CRM_Contact_Selector extends CRM_Core_Selector_Base implements CRM_Core_Se
       if ($output != CRM_Core_Selector_Controller::EXPORT) {
         $row['checkbox'] = CRM_Core_Form::CB_PREFIX . $result->contact_id;
 
-        if (CRM_Utils_Array::value('deleted_contacts', $this->_formValues)
-          && CRM_Core_Permission::check('access deleted contacts')
+        if (!empty($this->_formValues['deleted_contacts']) && CRM_Core_Permission::check('access deleted contacts')
         ) {
           $links = array(
             array(
@@ -746,8 +759,7 @@ class CRM_Contact_Selector extends CRM_Core_Selector_Base implements CRM_Core_Se
           );
         }
         elseif ((is_numeric(CRM_Utils_Array::value('geo_code_1', $row))) ||
-          ($config->mapGeoCoding &&
-            CRM_Utils_Array::value('city', $row) &&
+          ($config->mapGeoCoding && !empty($row['city']) &&
             CRM_Utils_Array::value('state_province', $row)
           )
         ) {
@@ -853,8 +865,7 @@ class CRM_Contact_Selector extends CRM_Core_Selector_Base implements CRM_Core_Se
 
 
     foreach ($rows as $id => & $row) {
-      if (CRM_Utils_Array::value('deleted_contacts', $this->_formValues)
-        && CRM_Core_Permission::check('access deleted contacts')
+      if (!empty($this->_formValues['deleted_contacts']) && CRM_Core_Permission::check('access deleted contacts')
       ) {
         $links = array(
           array(
@@ -890,8 +901,7 @@ class CRM_Contact_Selector extends CRM_Core_Selector_Base implements CRM_Core_Se
         );
       }
       elseif ((is_numeric(CRM_Utils_Array::value('geo_code_1', $row))) ||
-        ($config->mapGeoCoding &&
-          CRM_Utils_Array::value('city', $row) &&
+        ($config->mapGeoCoding && !empty($row['city']) &&
           CRM_Utils_Array::value('state_province', $row)
         )
       ) {
@@ -1065,7 +1075,7 @@ SELECT 'civicrm_contact', contact_a.id, contact_a.id, '$cacheKey', contact_a.dis
       );
 
       foreach ($defaultAddress as $columnName => $column) {
-        if (CRM_Utils_Array::value($columnName, $addressOptions)) {
+        if (!empty($addressOptions[$columnName])) {
           self::$_columnHeaders[$columnName] = $column;
         }
       }

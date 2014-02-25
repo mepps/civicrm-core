@@ -164,7 +164,7 @@ class CRM_Contribute_Form_AbstractEditPayment extends CRM_Core_Form {
     //Check if this is an online transaction (financial_trxn.payment_processor_id NOT NULL)
     $this->_online = FALSE;
     $fids = CRM_Core_BAO_FinancialTrxn::getFinancialTrxnId($id);
-    if (CRM_Utils_Array::value('financialTrxnId', $fids)) {
+    if (!empty($fids['financialTrxnId'])) {
       $this->_online = CRM_Core_DAO::getFieldValue('CRM_Financial_DAO_FinancialTrxn', $fids['financialTrxnId'], 'payment_processor_id');
     }
 
@@ -175,12 +175,6 @@ class CRM_Contribute_Form_AbstractEditPayment extends CRM_Core_Form {
 
     $this->assign('isOnline', $this->_online ? TRUE : FALSE);
 
-    //unset the honor type id:when delete the honor_contact_id
-    //and edit the contribution, honoree infomation pane open
-    //since honor_type_id is present
-    if (!CRM_Utils_Array::value('honor_contact_id', $values)) {
-      unset($values['honor_type_id']);
-    }
     //to get note id
     $daoNote = new CRM_Core_BAO_Note();
     $daoNote->entity_table = 'civicrm_contribution';
