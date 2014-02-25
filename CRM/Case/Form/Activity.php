@@ -262,7 +262,7 @@ class CRM_Case_Form_Activity extends CRM_Activity_Form_Activity {
 
   public function buildQuickForm() {
     $this->_fields['source_contact_id']['label'] = ts('Reported By');
-    $this->_fields['status_id']['attributes'] = array('' => ts('- select -')) + CRM_Core_PseudoConstant::activityStatus();
+    unset($this->_fields['status_id']['attributes']['required']);
 
     if ($this->_caseType) {
       $xmlProcessor = new CRM_Case_XMLProcessor_Process();
@@ -290,6 +290,8 @@ class CRM_Case_Form_Activity extends CRM_Activity_Form_Activity {
     $this->assign('urlPath', 'civicrm/case/activity');
 
     $encounterMediums = CRM_Case_PseudoConstant::encounterMedium();
+    // Fixme: what's the justification for this? It seems like it is just re-adding an option in case it is the default and disabled.
+    // Is that really a big problem?
     if ($this->_activityTypeFile == 'OpenCase') {
       $this->_encounterMedium = CRM_Core_DAO::getFieldValue('CRM_Activity_DAO_Activity', $this->_activityId,
         'medium_id'
@@ -401,9 +403,6 @@ class CRM_Case_Form_Activity extends CRM_Activity_Form_Activity {
 
     // store the submitted values in an array
     $params = $this->controller->exportValues($this->_name);
-    if ($params['source_contact_id']) {
-      $params['source_contact_id'] = $params['source_contact_qid'];
-    }
 
     //set parent id if its edit mode
     if ($parentId = CRM_Utils_Array::value('parent_id', $this->_defaults)) {

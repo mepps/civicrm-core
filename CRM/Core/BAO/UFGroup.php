@@ -1873,9 +1873,12 @@ AND    ( entity_id IS NULL OR entity_id <= 0 )
       foreach ($gender as $key => $var) {
         $genderOptions[$key] = $form->createElement('radio', NULL, ts('Gender'), $var, $key);
       }
-      $form->addGroup($genderOptions, $name, $title);
+      $group = $form->addGroup($genderOptions, $name, $title);
       if ($required) {
         $form->addRule($name, ts('%1 is a required field.', array(1 => $title)), 'required');
+      }
+      else {
+        $group->setAttribute('unselectable', TRUE);
       }
     }
     elseif ($fieldName === 'prefix_id' || $fieldName === 'suffix_id') {
@@ -2033,7 +2036,7 @@ AND    ( entity_id IS NULL OR entity_id <= 0 )
       $form->addElement('checkbox', $name, $title);
     }
     elseif ($fieldName == 'soft_credit') {
-      CRM_Contact_Form_NewContact::buildQuickForm($form, $rowNumber, NULL, FALSE, 'soft_credit_');
+      $form->addEntityRef("soft_credit_contact_id[$rowNumber]", ts('Soft Credit To'), array('create' => TRUE));
       $form->addMoney("soft_credit_amount[{$rowNumber}]", ts('Amount'), FALSE, NULL, FALSE);
     }
     elseif ($fieldName == 'product_name') {
@@ -3218,7 +3221,6 @@ AND    ( entity_id IS NULL OR entity_id <= 0 )
     $reservedProfiles = array();
     $profileNames = array();
     if ($type == 'Contact') {
-      $whereClause = 'name IN ( "new_individual", "new_organization", "new_household" )';
       if (CRM_Contact_BAO_ContactType::isActive('Individual')) {
         $profileNames[] = '"new_individual"';
       }
@@ -3247,6 +3249,40 @@ AND    ( entity_id IS NULL OR entity_id <= 0 )
       $reservedProfiles[$key] = $dao->title;
     }
     return $reservedProfiles;
+  }
+
+  /**
+   * @param array|string $profiles - name of profile(s) to create links for
+   * @param array $appendProfiles - name of profile(s) to append to each link
+   */
+  static function getCreateLinks($profiles, $appendProfiles = array()) {
+    $profiles = (array) $profiles;
+    $toGet = array_merge($profiles, (array) $appendProfiles);
+    $retrieved = civicrm_api3('uf_group', 'get', array(
+      'name' => array('IN' => $toGet),
+      'is_active' => 1,
+    ));
+    $links = $append = array();
+    if (!empty($retrieved['values'])) {
+      foreach($retrieved['values'] as $id => $profile) {
+        if (in_array($profile['name'], $profiles)) {
+          $links[] = array(
+            'label' => $profile['title'],
+            'url' => CRM_Utils_System::url('civicrm/profile/create', 'reset=1&gid=' . $id),
+            'name' => $profile['name'],
+          );
+        }
+        else {
+          $append[] = $id;
+        }
+      }
+      foreach ($append as $id) {
+        foreach ($links as &$link) {
+          $link['url'] .= ",$id";
+        }
+      }
+    }
+    return $links;
   }
 
   /**

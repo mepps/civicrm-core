@@ -117,8 +117,13 @@ class CRM_Core_Invoke {
       $kernel = new AppKernel('dev', true);
       $kernel->loadClassCache();
       $response = $kernel->handle(Symfony\Component\HttpFoundation\Request::createFromGlobals());
-      // $response->send();
-      return $response->getContent();
+      if (preg_match(':^text/html:', $response->headers->get('Content-Type'))) {
+        // let the CMS handle the trappings
+        return $response->getContent();
+      } else {
+        $response->send();
+        exit();
+      }
     }
   }
   /**
@@ -307,7 +312,7 @@ class CRM_Core_Invoke {
         $title = CRM_Utils_Array::value('title', $item);
         if (strstr($item['page_callback'], '_Page')) {
           $object = new $item['page_callback'] ($title, $mode );
-          $object->urlPath = $_GET[$config->userFrameworkURLVar];
+          $object->urlPath = explode('/', $_GET[$config->userFrameworkURLVar]);
         }
         elseif (strstr($item['page_callback'], '_Controller')) {
           $addSequence = 'false';

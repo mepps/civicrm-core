@@ -39,8 +39,10 @@ class CRM_Report_Form_Event_ParticipantListing extends CRM_Report_Form_Event {
 
   protected $_contribField = FALSE;
   protected $_lineitemField = FALSE;
+  protected $_groupFilter = TRUE;
+  protected $_tagFilter = TRUE;
 
-  protected $_customGroupExtends = array('Participant', 'Contact', 'Individual',);
+  protected $_customGroupExtends = array('Participant', 'Contact', 'Individual', 'Event');
 
   public $_drilldownReport = array('event/income' => 'Link to Detail Report');
 
@@ -237,6 +239,11 @@ class CRM_Report_Form_Event_ParticipantListing extends CRM_Report_Form_Event {
         ),
         'order_bys' =>
         array(
+          'participant_register_date' =>
+          array('title' => ts('Registration Date'),
+            'default_weight' => '1',
+            'default_order' => 'ASC',
+          ),
           'event_id' =>
           array('title' => ts('Event'), 'default_weight' => '1', 'default_order' => 'ASC'),
         ),

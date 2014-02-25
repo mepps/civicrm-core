@@ -796,6 +796,7 @@ class CiviUnitTestCase extends PHPUnit_Extensions_Database_TestCase {
     }
     return $result;
   }
+
   /**
    * This function exists to wrap api functions
    * so we can ensure they succeed, generate and example & throw exceptions without litterering the test with checks
@@ -805,6 +806,10 @@ class CiviUnitTestCase extends PHPUnit_Extensions_Database_TestCase {
    * @param array $params
    * @param string $function - pass this in to create a generated example
    * @param string $file - pass this in to create a generated example
+   * @param string $description
+   * @param string|null $subfile
+   * @param string|null $actionName
+   * @return array|int
    */
   function callAPIAndDocument($entity, $action, $params, $function, $file, $description = "", $subfile = NULL, $actionName = NULL){
     $params['version'] = $this->_apiversion;
@@ -1460,9 +1465,8 @@ class CiviUnitTestCase extends PHPUnit_Extensions_Database_TestCase {
    * @return int groupId of created group
    *
    */
-  function groupCreate($params = NULL) {
-    if ($params === NULL) {
-      $params = array(
+  function groupCreate($params = array()) {
+    $params = array_merge(array(
         'name' => 'Test Group 1',
         'domain_id' => 1,
         'title' => 'New Test Group Created',
@@ -1473,8 +1477,7 @@ class CiviUnitTestCase extends PHPUnit_Extensions_Database_TestCase {
           '1' => 1,
           '2' => 1,
         ),
-      );
-    }
+      ), $params);
 
     $result = $this->callAPISuccess('Group', 'create', $params);
     return $result['id'];
@@ -1859,6 +1862,10 @@ class CiviUnitTestCase extends PHPUnit_Extensions_Database_TestCase {
         $action = empty($action) ? 'getfields' : $action;
         $entityAction = 'GetFields';
       }
+      elseif (strstr($function, 'GetList')) {
+        $action = empty($action) ? 'getlist' : $action;
+        $entityAction = 'GetList';
+      }
       elseif (strstr($function, 'Get')) {
         $action = empty($action) ? 'get' : $action;
         $entityAction = 'Get';
@@ -1916,21 +1923,15 @@ class CiviUnitTestCase extends PHPUnit_Extensions_Database_TestCase {
 
     $smarty->assign('action', $action);
     if (empty($subfile)) {
-      if (file_exists('../tests/templates/documentFunction.tpl')) {
-        $f = fopen("../api/v3/examples/$entity$entityAction.php", "w");
-        fwrite($f, $smarty->fetch('../tests/templates/documentFunction.tpl'));
-        fclose($f);
-      }
+      $subfile = $entityAction;
     }
-    else {
-      if (file_exists('../tests/templates/documentFunction.tpl')) {
-        if (!is_dir("../api/v3/examples/$entity")) {
-          mkdir("../api/v3/examples/$entity");
-        }
-        $f = fopen("../api/v3/examples/$entity/$subfile.php", "w+b");
-        fwrite($f, $smarty->fetch('../tests/templates/documentFunction.tpl'));
-        fclose($f);
+    if (file_exists('../tests/templates/documentFunction.tpl')) {
+      if (!is_dir("../api/v3/examples/$entity")) {
+        mkdir("../api/v3/examples/$entity");
       }
+      $f = fopen("../api/v3/examples/$entity/$subfile.php", "w+b");
+      fwrite($f, $smarty->fetch('../tests/templates/documentFunction.tpl'));
+      fclose($f);
     }
   }
 
