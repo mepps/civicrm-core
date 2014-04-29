@@ -930,9 +930,10 @@ WHERE id={$id}; ";
       'image/gif',
       'image/x-png',
     );
-
     if (in_array($params[$imageIndex]['type'], $mimeType)) {
-      $params[$imageIndex] = CRM_Contact_BAO_Contact::getRelativePath($params[$imageIndex]['name']);
+
+      $photo = basename($params[$imageIndex]['name']);
+      $params[$imageIndex] =  CRM_Utils_System::url('civicrm/contact/imagefile/', 'photo='.$photo, TRUE);
       return TRUE;
     }
     else {
